@@ -26,6 +26,39 @@ private:
     std::pmr::polymorphic_allocator<Node> allocator;
 
 public:
+    class Iterator {
+    private:
+        Node* current;
+
+    public:
+        Iterator(Node* current) : current(current) {}
+
+        T& operator*() {
+            return current->data;
+        }
+
+        T* operator->() {
+            return &current->data;
+        }
+
+        bool operator!=(const Iterator& other) const {
+            return current != other.current;
+        }
+
+        Iterator& operator++() {
+            if (current) {
+                current = current->next.get();
+            }
+            return *this;
+        }
+
+        Iterator operator++(int) {
+            Iterator temp = *this;
+            ++(*this);
+            return temp;
+        }
+    };
+
     Queue(std::pmr::memory_resource* resource = std::pmr::get_default_resource()) 
     : allocator(resource) {};
     
@@ -66,6 +99,14 @@ public:
 
     std::size_t size() const {
         return queue_size;
+    }
+
+    Iterator begin() const {
+        return Iterator(first.get());
+    }
+
+    Iterator end() const {
+        return Iterator(nullptr);
     }
 
     ~Queue() {

@@ -11,6 +11,7 @@ set(TEST_SOURCES
   test_main.cpp
   test_memory_resource.cpp
   test_queue.cpp
+  test_queue_iterator.cpp
 )
 
 add_executable(tests ${TEST_SOURCES})
