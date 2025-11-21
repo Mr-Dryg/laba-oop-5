@@ -9,11 +9,12 @@ FetchContent_MakeAvailable(googletest)
 
 set(TEST_SOURCES
   test_main.cpp
-  test01.cpp
+  test_memory_resource.cpp
+  test_queue.cpp
 )
 
 add_executable(tests ${TEST_SOURCES})
-target_link_libraries(tests gtest_main gmock)
+target_link_libraries(tests gtest_main gmock my_memory_resource)
 
 include(GoogleTest)
 gtest_discover_tests(tests)

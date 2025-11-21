@@ -6,5 +6,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include_directories(include)
 
+add_subdirectory(src)
+
+add_executable(main main.cpp)
+target_link_libraries(main my_memory_resource)
+
 enable_testing()
 add_subdirectory(tests)

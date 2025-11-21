@@ -1,0 +1,1 @@
+add_library(my_memory_resource my_memory_resource.cpp)

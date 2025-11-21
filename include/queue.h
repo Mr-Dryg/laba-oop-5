@@ -1,18 +1,18 @@
+#include "../include/my_memory_resource.h"
 #include <memory>
-#include <stdexcept>
+#include <memory_resource>
 
-template <class T, class allocator_type>
-    requires std::is_default_constructible_v<T> && 
-             std::is_same_v<allocator_type, std::pmr::polymorphic_allocator<T>>
+template <class T>
+    requires std::is_default_constructible_v<T>
 class Queue {
 private:
-    struct PolymorphicDeleter {
-        void operator()(T* ptr) const {}
-    };
-
     struct Node;
 
-    using NodeUniquePtr = std::unique_ptr<Node, PolymorphicDeleter>;
+    struct Deleter {
+        void operator()(Node* ptr) const {}
+    };
+
+    using NodeUniquePtr = std::unique_ptr<Node, Deleter>;
 
     struct Node {
         T data;
@@ -20,40 +20,57 @@ private:
     };
 
     NodeUniquePtr first = nullptr;
-    NodeUniquePtr last = nullptr;
+    Node* last = nullptr;
     std::size_t queue_size = 0;
 
-    allocator_type polymorphic_allocator;
+    std::pmr::polymorphic_allocator<Node> allocator;
 
 public:
-    Queue(allocator_type alloc = {}) : polymorphic_allocator(alloc) {}
+    Queue(std::pmr::memory_resource* resource = std::pmr::get_default_resource()) 
+    : allocator(resource) {};
     
     void push_back(const T& element) {
-        NodeUniquePtr node = NodeUniquePtr(polymorphic_allocator.allocate(sizeof(Node)));
-        node.get().data = element;
-        node.get().next = nullptr;
-        last.get().next = node;
-        last = node;
-        if (first == nullptr) {
-            first = node;
+        Node* raw_pointer = allocator.allocate(1);
+        allocator.construct(raw_pointer, Node{element, nullptr});
+        NodeUniquePtr node(raw_pointer, Deleter{});
+
+        if (last == nullptr) {
+            last = node.get();
         }
+        else {
+            last->next = std::move(node);
+            last = last->next.get();
+        }
+        
+        if (first == nullptr) {
+            first = std::move(node);
+        }
+        queue_size++;
     }
 
     T pop_front() {
         if (first == nullptr) {
             throw std::logic_error("Queue is empty");
         }
-        T element = first.get().data;
-        NodeUniquePtr node = first;
-        first = first.get().next;
+        T element = first->data;
+        Node* node = first.get();
+        first = std::move(node->next);
         if (first == nullptr) {
             last = nullptr;
         }
-        polymorphic_allocator.destroy(node);
+        std::allocator_traits<decltype(allocator)>::destroy(allocator, node);
+        allocator.deallocate(node, 1);
+        queue_size--;
         return element;
     }
 
     std::size_t size() const {
         return queue_size;
+    }
+
+    ~Queue() {
+        while (queue_size > 0) {
+            pop_front();
+        }
     }
 };
